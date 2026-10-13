@@ -1,73 +1,158 @@
-const form = document.getElementById('project-form');
-const nameInput = document.getElementById('name');
-const statusInput = document.getElementById('status');
-const saveButton = document.getElementById('save-button');
-const cancelButton = document.getElementById('cancel-button');
-const projectList = document.getElementById('project-list');
+const projects = [];
 
-let projects = [];
+// Remembers which project is being edited (null means Add mode)
 let editingId = null;
 
-function renderProjects() {
-  projectList.innerHTML = '';
-  projects.forEach(project => {
-    const li = document.createElement('li');
-    li.textContent = `${project.name} - ${project.status} `;
+// Get the HTML elements
+const projectForm = document.querySelector("#project-form");
+const nameInput = document.querySelector("#name");
+const statusInput = document.querySelector("#status");
+const saveButton = document.querySelector("#save-button");
+const cancelButton = document.querySelector("#cancel-button");
+const projectList = document.querySelector("#project-list");
+const emptyState = document.querySelector("#empty-state");
 
-    const editBtn = document.createElement('button');
-    editBtn.type = 'button';
-    editBtn.textContent = 'Edit';
-    editBtn.addEventListener('click', () => startEdit(project.id));
-    li.appendChild(editBtn);
+const ADD_BUTTON_TEXT = "Save Project";
+const EDIT_BUTTON_TEXT = "Save changes";
 
-    projectList.appendChild(li);
-  });
+cancelButton.textContent = "Cancel edit";
+
+// Put the form back into Add mode
+function resetToAddMode() {
+  editingId = null;
+  projectForm.reset();
+  saveButton.textContent = ADD_BUTTON_TEXT;
+  cancelButton.hidden = true;
 }
 
-function startEdit(id) {
-  const project = projects.find(p => p.id === id);
-  if (!project) return;
-  editingId = id;
+// Fill the form with a project's values and switch to Edit mode
+function startEditing(projectId) {
+  const project = projects.find((item) => item.id === projectId);
+
+  if (!project) {
+    return;
+  }
+
+  editingId = project.id;
   nameInput.value = project.name;
   statusInput.value = project.status;
-  saveButton.textContent = 'Save changes';
-  cancelButton.style.display = 'inline';
+  saveButton.textContent = EDIT_BUTTON_TEXT;
+  cancelButton.hidden = false;
+  nameInput.focus();
 }
 
-function resetForm() {
-  form.reset();
-  editingId = null;
-  saveButton.textContent = 'Add project';
-  cancelButton.style.display = 'none';
+// Delete one project (found by its id) after the user confirms
+function deleteProject(projectId) {
+  const index = projects.findIndex((item) => item.id === projectId);
+
+  if (index === -1) {
+    return;
+  }
+
+  const project = projects[index];
+  const confirmed = window.confirm(
+    `Delete "${project.name}" (${project.status})?`
+  );
+
+  // Cancel leaves the projects unchanged
+  if (!confirmed) {
+    return;
+  }
+
+  projects.splice(index, 1);
+
+  // If the deleted project was being edited, go back to Add mode
+  if (editingId === projectId) {
+    resetToAddMode();
+  }
+
+  renderProjects();
 }
 
-form.addEventListener('submit', e => {
-  e.preventDefault();
+// Display all projects
+function renderProjects() {
+  projectList.innerHTML = "";
+
+  projects.forEach((project) => {
+    const projectItem = document.createElement("li");
+
+    const projectName = document.createElement("span");
+    projectName.textContent = project.name;
+
+    const projectStatus = document.createElement("span");
+    projectStatus.textContent = ` — ${project.status}`;
+
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.textContent = "Edit";
+    editButton.addEventListener("click", function () {
+      startEditing(project.id);
+    });
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.textContent = "Delete";
+    deleteButton.addEventListener("click", function () {
+      deleteProject(project.id);
+    });
+
+    projectItem.appendChild(projectName);
+    projectItem.appendChild(projectStatus);
+    projectItem.appendChild(editButton);
+    projectItem.appendChild(deleteButton);
+
+    projectList.appendChild(projectItem);
+  });
+
+  // Update the empty-state message if it exists
+  if (emptyState) {
+    emptyState.hidden = projects.length > 0;
+  }
+}
+
+// Add a new project, or update the selected one, when the form is submitted
+projectForm.addEventListener("submit", function (event) {
+  event.preventDefault();
+
   const name = nameInput.value.trim();
-  const status = statusInput.value.trim();
-  if (!name) return;
+  const status = statusInput.value;
 
-  if (editingId) {
-    const project = projects.find(p => p.id === editingId);
+  // Reject an empty project name
+  if (name === "") {
+    nameInput.focus();
+    return;
+  }
+
+  if (editingId === null) {
+    // Add mode: create and add a new project
+    const project = {
+      id: crypto.randomUUID(),
+      name: name,
+      status: status,
+    };
+
+    projects.push(project);
+  } else {
+    // Edit mode: update the selected project, keeping the same id
+    const project = projects.find((item) => item.id === editingId);
+
     if (project) {
       project.name = name;
       project.status = status;
     }
-  } else {
-    const newProject = {
-      id: Date.now(),
-      name: name,
-      status: status
-    };
-    projects.push(newProject);
   }
 
+  // Refresh the displayed list
   renderProjects();
-  resetForm();
+
+  // Clear the form fields and return to Add mode
+  resetToAddMode();
 });
 
-cancelButton.addEventListener('click', () => {
-  resetForm();
+// Cancel editing without changing any project
+cancelButton.addEventListener("click", function () {
+  resetToAddMode();
 });
 
+// Show the initial empty list
 renderProjects();
