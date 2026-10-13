@@ -1,14 +1,11 @@
 import express from 'express';
+import { createApp } from './app.js';
+import { db } from './database.js';
 
-const app = express();
+const app = createApp(db);
 
-// Parse JSON request bodies up to 10 KB
 app.use(express.json({ limit: '10kb' }));
 
-// Serve frontend files
-app.use(express.static('public'));
-
-// Health-check route
 app.get('/api/health', (req, res) => {
   res.json({ ok: true });
 });
