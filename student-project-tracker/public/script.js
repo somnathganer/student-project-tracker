@@ -1,55 +1,73 @@
-const projects = [];
+const form = document.getElementById('project-form');
+const nameInput = document.getElementById('name');
+const statusInput = document.getElementById('status');
+const saveButton = document.getElementById('save-button');
+const cancelButton = document.getElementById('cancel-button');
+const projectList = document.getElementById('project-list');
 
-const projectForm = document.getElementById("project-form");
-const nameInput = document.getElementById("name");
-const statusInput = document.getElementById("status");
-const projectList = document.getElementById("project-list");
-const emptyState = document.getElementById("empty-state");
+let projects = [];
+let editingId = null;
 
-// Display every project currently stored in the array.
 function renderProjects() {
-  projectList.replaceChildren();
+  projectList.innerHTML = '';
+  projects.forEach(project => {
+    const li = document.createElement('li');
+    li.textContent = `${project.name} - ${project.status} `;
 
-  projects.forEach((project) => {
-    const listItem = document.createElement("li");
-    const projectName = document.createElement("p");
-    const projectStatus = document.createElement("p");
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.textContent = 'Edit';
+    editBtn.addEventListener('click', () => startEdit(project.id));
+    li.appendChild(editBtn);
 
-    projectName.textContent = project.name;
-    projectStatus.textContent = project.status;
-
-    listItem.append(projectName, projectStatus);
-    projectList.appendChild(listItem);
+    projectList.appendChild(li);
   });
-
-  if (emptyState) {
-    emptyState.hidden = projects.length > 0;
-  }
 }
 
-// Handle project submissions.
-projectForm.addEventListener("submit", (event) => {
-  event.preventDefault();
+function startEdit(id) {
+  const project = projects.find(p => p.id === id);
+  if (!project) return;
+  editingId = id;
+  nameInput.value = project.name;
+  statusInput.value = project.status;
+  saveButton.textContent = 'Save changes';
+  cancelButton.style.display = 'inline';
+}
 
+function resetForm() {
+  form.reset();
+  editingId = null;
+  saveButton.textContent = 'Add project';
+  cancelButton.style.display = 'none';
+}
+
+form.addEventListener('submit', e => {
+  e.preventDefault();
   const name = nameInput.value.trim();
-  const status = statusInput.value;
+  const status = statusInput.value.trim();
+  if (!name) return;
 
-  if (!name) {
-    nameInput.value = "";
-    nameInput.focus();
-    return;
+  if (editingId) {
+    const project = projects.find(p => p.id === editingId);
+    if (project) {
+      project.name = name;
+      project.status = status;
+    }
+  } else {
+    const newProject = {
+      id: Date.now(),
+      name: name,
+      status: status
+    };
+    projects.push(newProject);
   }
 
-  const project = {
-    id: crypto.randomUUID(),
-    name: name,
-    status: status,
-  };
-
-  projects.push(project);
-
   renderProjects();
-
-  projectForm.reset();
-  nameInput.focus();
+  resetForm();
 });
+
+cancelButton.addEventListener('click', () => {
+  resetForm();
+});
+
+renderProjects();
